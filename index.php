@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="author" content="MartiniStad & Gemini">
+    <meta name="description" content="Schaak notitie spel met pgn file ondersteuning.">
+    
+    <title>Schaak Notatie spel MartiniStad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Basis Bord */
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            aspect-ratio: 1 / 1;
+            width: 100%;
+            max-width: 600px;
+            border: 4px solid #334155;
+            user-select: none;
+            transition: transform 0.5s ease-in-out;
+            background-color: #334155;
+        }
+
+        .chess-board.flipped { transform: rotate(180deg); }
+        .chess-board.flipped .square { transform: rotate(180deg); }
+
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .square.light { background-color: #f0d9b5; }
+        .square.dark { background-color: #b58863; }
+        
+        .square.selected { background-color: #a4b95f !important; }
+        
+        .square.valid-move::after {
+            content: '';
+            position: absolute;
+            width: 25%;
+            height: 25%;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 50%;
+        }
+        .square.valid-capture::after {
+            content: '';
+            position: absolute;
+            width: 85%;
+            height: 85%;
+            border: 4px solid rgba(0,0,0,0.2);
+            border-radius: 50%;
+        }
+
+        .square.last-move { background-color: rgba(255, 255, 0, 0.4) !important; }
+        .square.check { background-color: #ef4444 !important; }
+
+        /* STYLING VOOR PNG AFBEELDINGEN */
+        .piece-img {
+            width: 95%;
+            height: 95%;
+            object-fit: contain;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.4));
+            cursor: grab;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #promotion-modal {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+        }
+        .promo-btn {
+            background: #f0d9b5;
+            border: 2px solid #b58863;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .promo-btn:hover { transform: scale(1.1); background: #fff; }
+        .promo-btn img { width: 80%; height: 80%; }
+        
+        textarea::-webkit-scrollbar { width: 6px; }
+        textarea::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        
+        /* Visuele indicator voor hints knop */
+        .hints-off { opacity: 0.6; }
+
+        /* Rood flits effect bij ongeldige zet */
+        @keyframes flashRed {
+            0%   { opacity: 0.9; }
+            60%  { opacity: 0.7; }
+            100% { opacity: 0; }
+        }
+        .flash-invalid::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-color: #ef4444;
+            animation: flashRed 0.6s ease-out forwards;
+            z-index: 5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col items-center p-2 font-sans text-slate-800" onclick="initWakeLock()">
+
+    <div class="w-full max-w-xl space-y-3 relative">
+        
+        <!-- Header -->
+        <div class="bg-white p-3 rounded-lg shadow-sm flex justify-between items-center border border-slate-200">
+            <div>
+                <h1 class="text-lg font-bold text-slate-800">Schaakspel</h1>
+                <p id="status-text" class="text-sm text-slate-500">Wit aan zet</p>
+            </div>
+            <div id="turn-indicator" class="w-6 h-6 rounded-full border-2 border-slate-300 bg-white shadow-sm"></div>
+        </div>
+
+        <!-- Controls Boven -->
+        <div class="grid grid-cols-4 gap-2">
+            <!-- Start Button -->
+            <button onclick="goToStart()" id="btn-start" class="bg-slate-200 active:bg-slate-300 text-slate-700 font-bold py-2 rounded shadow disabled:opacity-50" title="Naar begin">
+                &lt;&lt;
+            </button>
+            <!-- Prev Button -->
+            <button onclick="navigateHistory(-1)" id="btn-prev" class="bg-slate-200 active:bg-slate-300 text-slate-700 font-bold py-2 rounded shadow disabled:opacity-50" title="Vorige zet">
+                &lt;
+            </button>
+            <!-- Next Button -->
+            <button onclick="navigateHistory(1)" id="btn-next" class="bg-slate-200 active:bg-slate-300 text-slate-700 font-bold py-2 rounded shadow disabled:opacity-50" title="Volgende zet">
+                &gt;
+            </button>
+            <!-- End Button -->
+            <button onclick="goToEnd()" id="btn-end" class="bg-slate-200 active:bg-slate-300 text-slate-700 font-bold py-2 rounded shadow disabled:opacity-50" title="Naar einde">
+                &gt;&gt;
+            </button>
+            
+            <!-- Flip Button -->
+            <button onclick="toggleBoardFlip()" class="col-span-2 bg-slate-200 active:bg-slate-300 text-slate-700 font-medium py-2 rounded shadow flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                Draai
+            </button>
+            
+            <!-- Toggle Hints Button -->
+            <button onclick="toggleMoveHints()" id="btn-hints" class="col-span-2 bg-slate-200 active:bg-slate-300 text-slate-700 font-medium py-2 rounded shadow flex items-center justify-center gap-2 transition-all">
+                <svg id="icon-hints-on" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                <svg id="icon-hints-off" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                <span>Hulp</span>
+            </button>
+        </div>
+
+        <!-- Bord Container -->
+        <div class="relative mx-auto shadow-xl rounded-sm overflow-hidden bg-slate-800 max-w-[600px] w-full aspect-square">
+            <div id="board" class="chess-board"></div>
+            
+            <!-- Promotie Modal -->
+            <div id="promotion-modal" class="absolute inset-0 hidden flex items-center justify-center z-50">
+                <div class="bg-white p-4 rounded-xl shadow-2xl text-center">
+                    <h3 class="text-lg font-bold mb-3 text-slate-800">Kies promotie:</h3>
+                    <div class="flex gap-2" id="promo-options"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moves & Names Display -->
+        <div class="grid grid-cols-2 gap-2 h-28">
+            <div class="flex flex-col h-full">
+                <input type="text" id="name-white" value="Wit" placeholder="Naam Wit" oninput="updateStatus()" class="text-xs font-bold text-slate-700 mb-1 ml-1 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors w-full">
+                <textarea id="moves-white" readonly class="w-full h-full p-2 text-sm font-mono bg-white border border-slate-300 rounded shadow-inner resize-none focus:outline-none"></textarea>
+            </div>
+            <div class="flex flex-col h-full">
+                <input type="text" id="name-black" value="Zwart" placeholder="Naam Zwart" oninput="updateStatus()" class="text-xs font-bold text-slate-700 mb-1 ml-1 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors w-full">
+                <textarea id="moves-black" readonly class="w-full h-full p-2 text-sm font-mono bg-slate-200 border border-slate-300 rounded shadow-inner resize-none focus:outline-none"></textarea>
+            </div>
+        </div>
+
+        <!-- Controls Onder -->
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="sendGameEmail()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                Mail
+            </button>
+            <button onclick="resetGame()" class="bg-red-100 hover:bg-red-200 text-red-700 font-medium py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                Nieuw Spel
+            </button>
+            
+            <button onclick="downloadPGN()" class="bg-slate-700 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Download *.pgn
+            </button>
+            <button onclick="document.getElementById('pgn-input').click()" class="bg-slate-700 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                Upload *.pgn
+            </button>
+        </div>
+        
+        <!-- FIX VOOR IOS: Accept attribuut verwijderd zodat iOS alle bestanden toestaat -->
+        <input type="file" id="pgn-input" class="hidden" onchange="handlePGNUpload(this)">
+
+        <div id="wakelock-status" class="text-center text-[10px] text-slate-400 opacity-50 pb-2">
+            Klik op het scherm om 'Stay Awake' te activeren.
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-4 border-t border-slate-300 pt-4 w-full flex justify-between items-center text-xs text-slate-500">
+            <span>&copy; 2025 MartiniStad & Gemini</span>
+    
+        </div>
+    </div>
+
+    <script src="js/s.js"></script>
+    
+</body>
+</html>
