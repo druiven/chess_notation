@@ -25,7 +25,7 @@ Built for **[MartiniStad.nl](https://www.martinistad.nl)**.
 
 ## How to Use
 
-1. Open `index.php` in a browser (works as a static file too — no server required)
+1. Open `index.html` in a browser (works as a static file too — no server required)
 2. Enter player names in the name fields above each move list
 3. Click a piece to select it — valid moves are highlighted
 4. Click the destination square to execute the move
@@ -43,7 +43,7 @@ Built for **[MartiniStad.nl](https://www.martinistad.nl)**.
 
 ```
 schaak/
-├── index.php          # Main page — board, UI, buttons
+├── index.html          # Main page — board, UI, buttons
 ├── js/
 │   └── s.js           # Chess engine & game logic
 └── pieces/            # PNG piece images (Kw.png, Qb.png, etc.)
