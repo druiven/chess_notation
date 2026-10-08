@@ -202,39 +202,58 @@
         <!-- Moves & Names Display -->
         <div class="grid grid-cols-2 gap-2 h-28">
             <div class="flex flex-col h-full">
-                <input type="text" id="name-white" value="Wit" placeholder="Naam Wit" oninput="updateStatus()" class="text-xs font-bold text-slate-700 mb-1 ml-1 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors w-full">
+                <!-- <label for="name-white" class="text-[10px] text-slate-500 mb-1">Naam wit (klik om te wijzigen)</label> -->
+                <input type="text" id="name-white" value="Wit" placeholder="Naam Wit" oninput="updateStatus()" class="text-xs font-bold text-slate-700 mb-1 bg-white border border-slate-300 rounded px-2 py-1 shadow-sm hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition-colors w-full">
                 <textarea id="moves-white" readonly class="w-full h-full p-2 text-sm font-mono bg-white border border-slate-300 rounded shadow-inner resize-none focus:outline-none"></textarea>
             </div>
             <div class="flex flex-col h-full">
-                <input type="text" id="name-black" value="Zwart" placeholder="Naam Zwart" oninput="updateStatus()" class="text-xs font-bold text-slate-700 mb-1 ml-1 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors w-full">
+                <!-- <label for="name-black" class="text-[10px] text-slate-500 mb-1">Naam zwart (klik om te wijzigen)</label> -->
+                <input type="text" id="name-black" value="Zwart" placeholder="Naam Zwart" oninput="updateStatus()" class="text-xs font-bold text-slate-700 mb-1 bg-white border border-slate-300 rounded px-2 py-1 shadow-sm hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition-colors w-full">
                 <textarea id="moves-black" readonly class="w-full h-full p-2 text-sm font-mono bg-slate-200 border border-slate-300 rounded shadow-inner resize-none focus:outline-none"></textarea>
             </div>
         </div>
 
         <!-- Controls Onder -->
-        <div class="grid grid-cols-2 gap-3">
-            <button onclick="sendGameEmail()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+        <div class="grid grid-cols-3 gap-2">
+            <button onclick="sendGameEmail()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 Mail
             </button>
-            <button onclick="resetGame()" class="bg-red-100 hover:bg-red-200 text-red-700 font-medium py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
-                Nieuw Spel
+            <button onclick="saveCurrentGame()" id="btn-save-game" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
+                Opslaan
             </button>
-
-            <button onclick="downloadPGN()" class="bg-slate-700 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+            <button onclick="openSavedGames()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
+                Tonen
+            </button>
+            <button onclick="downloadPGN()" title="Download PGN" aria-label="Download PGN" class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Download *.pgn
+                *.pgn
             </button>
-            <button onclick="document.getElementById('pgn-input').click()" class="bg-slate-700 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+            <button onclick="document.getElementById('pgn-input').click()" title="Upload PGN" aria-label="Upload PGN" class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                Upload *.pgn
+                *.pgn
             </button>
+            <button onclick="resetGame()" class="bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
+                Nieuw spel
+            </button>
+        </div>
+        <p id="game-action-status" class="min-h-4 text-center text-xs text-slate-500" role="status" aria-live="polite"></p>
+
+        <div id="saved-games-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="saved-games-title">
+            <div class="w-full max-w-lg max-h-[80vh] overflow-hidden rounded-xl bg-white shadow-2xl flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-200 p-4">
+                    <h2 id="saved-games-title" class="text-lg font-bold text-slate-800">Opgeslagen partijen</h2>
+                    <button type="button" onclick="closeSavedGames()" class="rounded px-3 py-1 text-slate-600 hover:bg-slate-100" aria-label="Sluiten">✕</button>
+                </div>
+                <p id="saved-games-status" class="px-4 pt-3 text-sm text-slate-500" role="status" aria-live="polite"></p>
+                <div id="saved-games-list" class="overflow-y-auto p-4 pt-2 space-y-2"></div>
+            </div>
         </div>
 
         <!-- FIX VOOR IOS: Accept attribuut verwijderd zodat iOS alle bestanden toestaat -->

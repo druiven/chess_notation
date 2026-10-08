@@ -11,10 +11,11 @@ A browser-based chess notation tool for recording and replaying chess games, wit
 - Flip the board to play from Black's perspective
 - Review the game using the move-history controls (`<<`, `<`, `>` and `>>`)
 - Save and restore the current game and player names in the browser
+- Save a game to the site database and browse/load the latest 100 saved games
 - Download the game as a PGN file or open it in the default mail client
 - Upload a PGN file and replay its moves
 - Request a screen wake lock on supported browsers
-- Store played games in the site's database when downloading, mailing or starting a new game
+- Save a game explicitly or automatically when mailing; duplicate PGNs are not stored twice
 
 ## Use
 
@@ -39,15 +40,17 @@ return [
 
 ### Database game storage
 
-The chess board and PGN download/upload run in the browser. Server-side game storage additionally requires the MartiniStad site's PHP bootstrap, database configuration and `SiteDb` class. Create the `schaak_game` table from [`schaak_game.sql`](schaak_game.sql) in the configured site database. If running this directory outside the MartiniStad site, the `save.php` endpoint will not have those site dependencies.
+The chess board and PGN download/upload run in the browser. Saving and browsing games additionally require the MartiniStad site's PHP bootstrap, database configuration and `SiteDb` class. Create the `schaak_game` table from [`schaak_game.sql`](schaak_game.sql) in the configured site database. If running this directory outside the MartiniStad site, the `save.php` and `games.php` endpoints will not have those site dependencies.
 
 ## PGN
 
-- **Download *.pgn** downloads the current game.
+- **Save** stores the current position's game in the database. If you navigate back through the moves and save, that shorter game is saved as a separate PGN.
+- **Show** lists up to 100 saved games by save date and player names; choose one to load it and restore its names, or use the red delete button beside it and confirm to remove it.
+- **Download *.pgn** downloads the current game without saving it to the database.
 - **Upload *.pgn** loads the player names and replays the moves in a selected PGN file.
-- **Mail** opens the default mail client with the PGN in the message body.
+- **Mail** saves the game first, then opens the default mail client with the PGN in the message body. An identical PGN is not saved twice.
 
-The game is also sent to the server for storage when a non-empty game is downloaded, mailed or replaced by starting a new game. Identical PGNs are stored only once.
+Games must contain at least one move to be saved or mailed.
 
 ## Files
 
@@ -57,6 +60,8 @@ schaak/
 ├── auth.php        # Login and signed-cookie authentication
 ├── config.php      # Local password-hash configuration (not committed)
 ├── save.php        # Authenticated endpoint for database storage
+├── games.php       # Authenticated endpoint for listing/loading saved games
+├── delete.php      # Authenticated endpoint for deleting a saved game
 ├── schaak_game.sql # Database schema for stored games
 ├── js/
 │   └── s.js        # Chess rules, board UI, history and PGN handling

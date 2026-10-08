@@ -642,10 +642,8 @@ function getPGN() {
     return pgn;
 }
 
-// Fire-and-forget so the download/mail flow is never blocked by the save
-function saveGameToServer() {
-    if (!moveHistory.length) return;
-    fetch('save.php', {
+async function saveGameToServer() {
+    const response = await fetch('save.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -654,12 +652,34 @@ function saveGameToServer() {
             pgn: getPGN()
         }),
         keepalive: true
-    }).then(r => r.json().then(j => console.log('Save result:', r.status, j)))
-        .catch(err => console.log('Save error:', err));
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || 'save-failed');
+    return result;
+}
+
+async function saveCurrentGame() {
+    const button = document.getElementById('btn-save-game');
+    const status = document.getElementById('game-action-status');
+    if (!moveHistory.length) {
+        status.textContent = 'Maak eerst minstens één zet om een partij op te slaan.';
+        return;
+    }
+
+    button.disabled = true;
+    status.textContent = 'Partij opslaan...';
+    try {
+        const result = await saveGameToServer();
+        status.textContent = result.saved ? 'Partij opgeslagen.' : 'Deze partij was al opgeslagen.';
+    } catch (error) {
+        console.error('Save error:', error);
+        status.textContent = 'Opslaan is niet gelukt. Probeer het opnieuw.';
+    } finally {
+        button.disabled = false;
+    }
 }
 
 function downloadPGN() {
-    saveGameToServer();
     const pgnContent = getPGN();
     const blob = new Blob([pgnContent], {
         type: 'text/plain'
@@ -674,12 +694,125 @@ function downloadPGN() {
     window.URL.revokeObjectURL(url);
 }
 
-function sendGameEmail() {
-    saveGameToServer();
+async function sendGameEmail() {
+    const status = document.getElementById('game-action-status');
+    if (!moveHistory.length) {
+        status.textContent = 'Maak eerst minstens één zet voordat je de partij mailt.';
+        return;
+    }
+    status.textContent = 'Partij opslaan...';
+    try {
+        const result = await saveGameToServer();
+        status.textContent = result.saved ? 'Partij opgeslagen; e-mail wordt geopend.' : 'Partij was al opgeslagen; e-mail wordt geopend.';
+    } catch (error) {
+        console.error('Save before mail error:', error);
+        status.textContent = 'Partij opslaan is niet gelukt; e-mail is niet geopend.';
+        return;
+    }
     const pgnBody = getPGN();
     const subject = encodeURIComponent("Mijn Schaakpartij (PGN)");
     const bodyEnc = encodeURIComponent(pgnBody);
     window.location.href = `mailto:?subject=${subject}&body=${bodyEnc}`;
+}
+
+async function openSavedGames() {
+    const modal = document.getElementById('saved-games-modal');
+    const status = document.getElementById('saved-games-status');
+    const list = document.getElementById('saved-games-list');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    status.textContent = 'Opgeslagen partijen laden...';
+    list.replaceChildren();
+
+    try {
+        const response = await fetch('games.php');
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || 'load-failed');
+        if (!result.games.length) {
+            status.textContent = 'Er zijn nog geen partijen opgeslagen.';
+            return;
+        }
+
+        status.textContent = '';
+        result.games.forEach(game => {
+            const row = document.createElement('div');
+            row.className = 'flex items-stretch gap-2';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-left hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500';
+
+            const date = document.createElement('span');
+            date.className = 'block text-xs text-slate-500';
+            date.textContent = new Date(String(game.played_at).replace(' ', 'T')).toLocaleString();
+            const names = document.createElement('span');
+            names.className = 'block font-medium text-slate-800';
+            names.textContent = `${game.white_name} – ${game.black_name}`;
+            button.append(date, names);
+            button.addEventListener('click', () => loadSavedGame(game.id, button));
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'w-12 shrink-0 rounded-lg bg-red-600 text-lg font-bold text-white shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50';
+            deleteButton.textContent = '×';
+            deleteButton.setAttribute('aria-label', `Verwijder partij ${game.white_name} tegen ${game.black_name}`);
+            deleteButton.title = 'Verwijder opgeslagen partij';
+            deleteButton.addEventListener('click', () => deleteSavedGame(game, deleteButton));
+
+            row.append(button, deleteButton);
+            list.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Load saved games error:', error);
+        status.textContent = 'Opgeslagen partijen konden niet worden geladen.';
+    }
+}
+
+async function deleteSavedGame(game, button) {
+    const names = `${game.white_name} – ${game.black_name}`;
+    const date = new Date(String(game.played_at).replace(' ', 'T')).toLocaleString();
+    if (!window.confirm(`Weet je zeker dat je deze opgeslagen partij wilt verwijderen?\n\n${names}\n${date}`)) return;
+
+    const status = document.getElementById('saved-games-status');
+    button.disabled = true;
+    status.textContent = 'Partij verwijderen...';
+    try {
+        const response = await fetch('delete.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: game.id })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || 'delete-failed');
+        await openSavedGames();
+    } catch (error) {
+        console.error('Delete saved game error:', error);
+        status.textContent = 'Partij verwijderen is niet gelukt. Probeer het opnieuw.';
+        button.disabled = false;
+    }
+}
+
+function closeSavedGames() {
+    const modal = document.getElementById('saved-games-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+async function loadSavedGame(id, button) {
+    const status = document.getElementById('saved-games-status');
+    button.disabled = true;
+    status.textContent = 'Partij laden...';
+    try {
+        const response = await fetch(`games.php?id=${encodeURIComponent(id)}`);
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || 'load-failed');
+        parseAndLoadPGN(result.pgn);
+        closeSavedGames();
+        document.getElementById('game-action-status').textContent = 'Opgeslagen partij geladen.';
+    } catch (error) {
+        console.error('Load saved game error:', error);
+        status.textContent = 'Deze partij kon niet worden geladen.';
+        button.disabled = false;
+    }
 }
 
 function handlePGNUpload(input) {
@@ -715,6 +848,7 @@ function parseAndLoadPGN(pgn) {
         attemptMoveFromSAN(token);
     }
     updateMoveDisplay();
+    persistMemory();
 }
 
 function attemptMoveFromSAN(san) {
@@ -1006,7 +1140,6 @@ function getValidMoves(r, c, bd, safe = true) {
 }
 
 function resetGame() {
-    saveGameToServer();
     clearMemory();
     initGame();
 }
