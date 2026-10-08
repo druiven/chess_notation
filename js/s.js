@@ -710,7 +710,8 @@ async function sendGameEmail() {
         return;
     }
     const pgnBody = getPGN();
-    const subject = encodeURIComponent("Mijn Schaakpartij (PGN)");
+    const stamp = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
+    const subject = encodeURIComponent(`Schaakpartij (PGN) ${stamp}`);
     const bodyEnc = encodeURIComponent(pgnBody);
     window.location.href = `mailto:?subject=${subject}&body=${bodyEnc}`;
 }
