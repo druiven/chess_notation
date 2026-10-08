@@ -10,5 +10,8 @@ desktop.ini
 *.swp
 *.swo
 
+# Password hash
+config.php
+
 # Logs
 *.log

@@ -119,6 +119,49 @@ function saveGameState() {
     currentHistoryIndex++;
     updateNavButtons();
     updateMoveDisplay();
+    persistMemory();
+}
+
+// --- MEMORY (localStorage) ---
+const MEMORY_KEY = 'schaakMemory.v1';
+
+function persistMemory() {
+    try {
+        localStorage.setItem(MEMORY_KEY, JSON.stringify({
+            stack: gameHistoryStack,
+            index: currentHistoryIndex,
+            flipped: isBoardFlipped,
+            hints: showMoveHints,
+            white: document.getElementById('name-white')?.value || '',
+            black: document.getElementById('name-black')?.value || ''
+        }));
+    } catch (e) { /* storage full or unavailable */ }
+}
+
+function restoreMemory() {
+    try {
+        const mem = JSON.parse(localStorage.getItem(MEMORY_KEY));
+        if (!mem || !Array.isArray(mem.stack) || !mem.stack.length) return false;
+        if (!Number.isInteger(mem.index) || mem.index < 0 || mem.index >= mem.stack.length) return false;
+
+        gameHistoryStack = mem.stack;
+        isBoardFlipped = !!mem.flipped;
+        showMoveHints = mem.hints !== false;
+        document.getElementById('name-white').value = mem.white || '';
+        document.getElementById('name-black').value = mem.black || '';
+        pendingPromotion = null;
+        hidePromotionModal();
+        loadState(mem.index);
+        updateHintsButton();
+        document.getElementById('board').classList.toggle('flipped', isBoardFlipped);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function clearMemory() {
+    try { localStorage.removeItem(MEMORY_KEY); } catch (e) { }
 }
 
 // --- HISTORY NAVIGATION ---
@@ -144,6 +187,7 @@ function loadState(index) {
         updateStatus();
         updateNavButtons();
         updateMoveDisplay();
+        persistMemory();
     }
 }
 
@@ -178,12 +222,14 @@ function toggleBoardFlip() {
     } else {
         boardEl.classList.remove('flipped');
     }
+    persistMemory();
 }
 
 function toggleMoveHints() {
     showMoveHints = !showMoveHints;
     updateHintsButton();
     renderBoard();
+    persistMemory();
 }
 
 function updateHintsButton() {
@@ -316,27 +362,10 @@ function handleSquareClick(r, c) {
         validMoves = getValidMoves(r, c, board);
         renderBoard();
     } else {
-        if (selectedSquare !== null) {
-            flashInvalidSquare(r, c);
-            return; // stuk blijft geselecteerd, gebruiker kan opnieuw proberen
-        }
         selectedSquare = null;
         validMoves = [];
         renderBoard();
     }
-}
-
-function flashInvalidSquare(r, c) {
-    const boardEl = document.getElementById('board');
-    const squareEl = boardEl.children[r * 8 + c];
-    if (!squareEl) return;
-    squareEl.classList.remove('flash-invalid');
-    // Forceer reflow zodat de animatie opnieuw start bij herhaling
-    void squareEl.offsetWidth;
-    squareEl.classList.add('flash-invalid');
-    squareEl.addEventListener('animationend', () => {
-        squareEl.classList.remove('flash-invalid');
-    }, { once: true });
 }
 
 function executeMove(move, promotionType = null) {
@@ -565,20 +594,40 @@ function isSquareUnderAttack(r, c, defenderColor, currentBoard) {
 }
 
 let wakeLock = null;
+let wakeLockWanted = false;
+function setWakeStatus(active) {
+    const el = document.getElementById('wakelock-status');
+    if (!el) return;
+    el.textContent = active ? "Stay Awake Actief" : "Stay Awake Inactief";
+    el.style.color = active ? "#22c55e" : "";
+}
 async function initWakeLock() {
-    if ('wakeLock' in navigator && !wakeLock) {
-        try {
-            wakeLock = await navigator.wakeLock.request('screen');
-            document.getElementById('wakelock-status').textContent = "Stay Awake Actief";
-            document.getElementById('wakelock-status').style.color = "#22c55e";
-        } catch (err) {
-            console.log('Wake Lock error:', err);
-        }
+    if (!('wakeLock' in navigator)) {
+        setWakeStatus(false);
+        return;
+    }
+    wakeLockWanted = true;
+    if (wakeLock || document.visibilityState !== 'visible') return;
+    try {
+        const lock = await navigator.wakeLock.request('screen');
+        wakeLock = lock;
+        setWakeStatus(true);
+        // The browser releases the lock on hide/screen-off; clear it so it can be re-requested
+        lock.addEventListener('release', () => {
+            if (wakeLock === lock) wakeLock = null;
+            setWakeStatus(false);
+        });
+    } catch (err) {
+        console.log('Wake Lock error:', err);
     }
 }
-document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') initWakeLock();
+document.addEventListener('visibilitychange', () => {
+    if (wakeLockWanted && document.visibilityState === 'visible') initWakeLock();
 });
+['touchstart', 'click'].forEach(ev =>
+    document.addEventListener(ev, () => { if (!wakeLock) initWakeLock(); }, { passive: true })
+);
+initWakeLock();
 
 function getPGN() {
     const date = new Date().toISOString().split('T')[0].replace(/-/g, '.');
@@ -593,7 +642,24 @@ function getPGN() {
     return pgn;
 }
 
+// Fire-and-forget so the download/mail flow is never blocked by the save
+function saveGameToServer() {
+    if (!moveHistory.length) return;
+    fetch('save.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            white: document.getElementById('name-white').value,
+            black: document.getElementById('name-black').value,
+            pgn: getPGN()
+        }),
+        keepalive: true
+    }).then(r => r.json().then(j => console.log('Save result:', r.status, j)))
+        .catch(err => console.log('Save error:', err));
+}
+
 function downloadPGN() {
+    saveGameToServer();
     const pgnContent = getPGN();
     const blob = new Blob([pgnContent], {
         type: 'text/plain'
@@ -609,6 +675,7 @@ function downloadPGN() {
 }
 
 function sendGameEmail() {
+    saveGameToServer();
     const pgnBody = getPGN();
     const subject = encodeURIComponent("Mijn Schaakpartij (PGN)");
     const bodyEnc = encodeURIComponent(pgnBody);
@@ -939,6 +1006,13 @@ function getValidMoves(r, c, bd, safe = true) {
 }
 
 function resetGame() {
+    saveGameToServer();
+    clearMemory();
     initGame();
 }
-initGame();
+
+['name-white', 'name-black'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', persistMemory);
+});
+
+if (!restoreMemory()) initGame();
