@@ -1,60 +1,70 @@
 # Schaak Notatie Spel
 
-A browser-based chess notation tool for recording and replaying chess games, with PGN file support.  
-Built for **[MartiniStad.nl](https://www.martinistad.nl)**.
-
----
+A browser-based chess notation tool for recording and replaying chess games, with PGN import and export. Built for [MartiniStad.nl](https://www.martinistad.nl).
 
 ## Features
 
-- **Interactive chess board** — click a piece, then click the destination square
-- **Move hints** — toggle valid move indicators on/off (the "Hulp" button)
-- **Invalid move feedback** — wrong square flashes red, piece stays selected
-- **Check highlighting** — the king's square turns red when in check
-- **Pawn promotion** — modal to choose Queen, Rook, Bishop or Knight
-- **Castling & en passant** — fully supported
-- **Board flip** — rotate the board to play from Black's perspective
-- **Move history** — notation displayed per player in standard algebraic notation (SAN)
-- **Navigate history** — step forward/backward through all moves (`<<` `<` `>` `>>`)
-- **Download PGN** — save the game as a `.pgn` file
-- **Upload PGN** — load and replay any existing `.pgn` file
-- **Mail game** — send the PGN via your mail client
-- **Stay Awake** — uses the Wake Lock API to keep the screen on during play
+- Play by selecting a piece and then its destination square
+- Toggle legal-move hints with **Hulp**
+- Highlight check and provide feedback for invalid moves
+- Handle castling, en passant and pawn promotion
+- Flip the board to play from Black's perspective
+- Review the game using the move-history controls (`<<`, `<`, `>` and `>>`)
+- Save and restore the current game and player names in the browser
+- Download the game as a PGN file or open it in the default mail client
+- Upload a PGN file and replay its moves
+- Request a screen wake lock on supported browsers
+- Store played games in the site's database when downloading, mailing or starting a new game
 
----
+## Use
 
-## How to Use
+This is a PHP application, not a standalone static page. Serve it through PHP and open `schaak/` on the site. The page requires a configured `config.php` password hash before it can be used.
 
-1. Open `index.html` in a browser (works as a static file too — no server required)
-2. Enter player names in the name fields above each move list
-3. Click a piece to select it — valid moves are highlighted
-4. Click the destination square to execute the move
-5. Use the navigation buttons to review moves
-6. Download or mail the game when finished
+To create the password hash, run:
 
-### PGN Support
-
-- **Download** saves the current game as a standard `.pgn` file
-- **Upload** loads any `.pgn` file and replays all moves automatically
-
----
-
-## File Structure
-
+```sh
+php -r "echo password_hash('your-password', PASSWORD_DEFAULT);"
 ```
+
+Create `config.php` in this directory with the generated hash:
+
+```php
+<?php
+return [
+    'password_hash' => 'paste-the-generated-hash-here',
+];
+```
+
+`config.php` is intentionally excluded from version control; do not commit it or put the plain-text password in it. The login cookie is scoped to `/schaak/` and lasts up to 90 days.
+
+### Database game storage
+
+The chess board and PGN download/upload run in the browser. Server-side game storage additionally requires the MartiniStad site's PHP bootstrap, database configuration and `SiteDb` class. Create the `schaak_game` table from [`../_database/schaak_game.sql`](../_database/schaak_game.sql) in the configured site database. If running this directory outside the MartiniStad site, the `save.php` endpoint will not have those site dependencies.
+
+## PGN
+
+- **Download *.pgn** downloads the current game.
+- **Upload *.pgn** loads the player names and replays the moves in a selected PGN file.
+- **Mail** opens the default mail client with the PGN in the message body.
+
+The game is also sent to the server for storage when a non-empty game is downloaded, mailed or replaced by starting a new game. Identical PGNs are stored only once.
+
+## Files
+
+```text
 schaak/
-├── index.html          # Main page — board, UI, buttons
+├── index.php       # Password-protected game page
+├── auth.php        # Login and signed-cookie authentication
+├── config.php      # Local password-hash configuration (not committed)
+├── save.php        # Authenticated endpoint for database storage
 ├── js/
-│   └── s.js           # Chess engine & game logic
-└── pieces/            # PNG piece images (Kw.png, Qb.png, etc.)
+│   └── s.js        # Chess rules, board UI, history and PGN handling
+└── pieces/         # PNG images for the chess pieces
 ```
 
-Piece filenames follow the pattern `[Type][Color].png`  
-e.g. `Kw.png` = White King, `Qb.png` = Black Queen
-
----
+Piece image filenames use `[Type][Color].png`, where `K`, `Q`, `R`, `B`, `N` and `P` mean king, queen, rook, bishop, knight and pawn; `w` and `b` mean White and Black. For example, `Kw.png` is the White king and `Qb.png` is the Black queen.
 
 ## Credits
 
 Made by **D art-painters** with the help of **GitHub Copilot**.  
-&copy; 2025 – 2026 D art-painters / MartiniStad.nl
+&copy; 2025–2026 D art-painters / MartiniStad.nl
