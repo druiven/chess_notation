@@ -39,7 +39,7 @@ return [
 
 ### Database game storage
 
-The chess board and PGN download/upload run in the browser. Server-side game storage additionally requires the MartiniStad site's PHP bootstrap, database configuration and `SiteDb` class. Create the `schaak_game` table from [`../_database/schaak_game.sql`](../_database/schaak_game.sql) in the configured site database. If running this directory outside the MartiniStad site, the `save.php` endpoint will not have those site dependencies.
+The chess board and PGN download/upload run in the browser. Server-side game storage additionally requires the MartiniStad site's PHP bootstrap, database configuration and `SiteDb` class. Create the `schaak_game` table from [`schaak_game.sql`](schaak_game.sql) in the configured site database. If running this directory outside the MartiniStad site, the `save.php` endpoint will not have those site dependencies.
 
 ## PGN
 
@@ -57,6 +57,7 @@ schaak/
 ├── auth.php        # Login and signed-cookie authentication
 ├── config.php      # Local password-hash configuration (not committed)
 ├── save.php        # Authenticated endpoint for database storage
+├── schaak_game.sql # Database schema for stored games
 ├── js/
 │   └── s.js        # Chess rules, board UI, history and PGN handling
 └── pieces/         # PNG images for the chess pieces
