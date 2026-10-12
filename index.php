@@ -214,34 +214,32 @@
         </div>
 
         <!-- Controls Onder -->
-        <div class="grid grid-cols-3 gap-2">
-            <button onclick="sendGameEmail()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Mail
-            </button>
-            <button onclick="saveCurrentGame()" id="btn-save-game" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
-                Opslaan
-            </button>
-            <button onclick="openSavedGames()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
-                Tonen
-            </button>
-            <button onclick="downloadPGN()" title="Download PGN" aria-label="Download PGN" class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                *.pgn
-            </button>
-            <button onclick="document.getElementById('pgn-input').click()" title="Upload PGN" aria-label="Upload PGN" class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                *.pgn
-            </button>
-            <button onclick="resetGame()" class="bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
-                Nieuw spel
-            </button>
+        <div class="space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="saveCurrentGame()" id="btn-save-game" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    Opslaan
+                </button>
+                <button onclick="openSavedGames()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    Tonen
+                </button>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="downloadPGN()" title="Download PGN" aria-label="Download PGN" class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    *.pgn
+                </button>
+                <button onclick="document.getElementById('pgn-input').click()" title="Upload PGN" aria-label="Upload PGN" class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    *.pgn
+                </button>
+                <button onclick="resetGame()" class="bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-2 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    Nieuw spel
+                </button>
+            </div>
         </div>
         <p id="game-action-status" class="min-h-4 text-center text-xs text-slate-500" role="status" aria-live="polite"></p>
 

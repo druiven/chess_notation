@@ -15,7 +15,7 @@ A browser-based chess notation tool for recording and replaying chess games, wit
 - Download the game as a PGN file or open it in the default mail client
 - Upload a PGN file and replay its moves
 - Request a screen wake lock on supported browsers
-- Save a game explicitly or automatically when mailing; duplicate PGNs are not stored twice
+- Save games explicitly, then mail any saved game; duplicate PGNs are not stored twice
 
 ## Use
 
@@ -45,12 +45,12 @@ The chess board and PGN download/upload run in the browser. Saving and browsing 
 ## PGN
 
 - **Save** stores the current position's game in the database. If you navigate back through the moves and save, that shorter game is saved as a separate PGN.
-- **Show** lists up to 100 saved games by save date and player names; choose one to load it and restore its names, or use the red delete button beside it and confirm to remove it.
+- **Show** lists up to 100 saved games by save date and player names; choose one to load it and restore its names, use the envelope button to email that saved PGN, or use the red delete button and confirm to remove it.
 - **Download *.pgn** downloads the current game without saving it to the database.
 - **Upload *.pgn** loads the player names and replays the moves in a selected PGN file.
-- **Mail** saves the game first, then opens the default mail client with the PGN in the message body. An identical PGN is not saved twice.
+- **Email** is available for saved games in the **Show** list, so a game must be saved before it can be mailed. An identical PGN is not saved twice.
 
-Games must contain at least one move to be saved or mailed.
+Games must contain at least one move to be saved.
 
 ## Files
 

@@ -694,28 +694,6 @@ function downloadPGN() {
     window.URL.revokeObjectURL(url);
 }
 
-async function sendGameEmail() {
-    const status = document.getElementById('game-action-status');
-    if (!moveHistory.length) {
-        status.textContent = 'Maak eerst minstens één zet voordat je de partij mailt.';
-        return;
-    }
-    status.textContent = 'Partij opslaan...';
-    try {
-        const result = await saveGameToServer();
-        status.textContent = result.saved ? 'Partij opgeslagen; e-mail wordt geopend.' : 'Partij was al opgeslagen; e-mail wordt geopend.';
-    } catch (error) {
-        console.error('Save before mail error:', error);
-        status.textContent = 'Partij opslaan is niet gelukt; e-mail is niet geopend.';
-        return;
-    }
-    const pgnBody = getPGN();
-    const stamp = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
-    const subject = encodeURIComponent(`Schaakpartij (PGN) ${stamp}`);
-    const bodyEnc = encodeURIComponent(pgnBody);
-    window.location.href = `mailto:?subject=${subject}&body=${bodyEnc}`;
-}
-
 async function openSavedGames() {
     const modal = document.getElementById('saved-games-modal');
     const status = document.getElementById('saved-games-status');
@@ -751,6 +729,14 @@ async function openSavedGames() {
             button.append(date, names);
             button.addEventListener('click', () => loadSavedGame(game.id, button));
 
+            const mailButton = document.createElement('button');
+            mailButton.type = 'button';
+            mailButton.className = 'w-12 shrink-0 rounded-lg bg-blue-600 text-white shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 flex items-center justify-center';
+            mailButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>';
+            mailButton.setAttribute('aria-label', `Mail partij ${game.white_name} tegen ${game.black_name}`);
+            mailButton.title = 'Mail opgeslagen partij';
+            mailButton.addEventListener('click', () => emailSavedGame(game, mailButton));
+
             const deleteButton = document.createElement('button');
             deleteButton.type = 'button';
             deleteButton.className = 'w-12 shrink-0 rounded-lg bg-red-600 text-lg font-bold text-white shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50';
@@ -759,12 +745,32 @@ async function openSavedGames() {
             deleteButton.title = 'Verwijder opgeslagen partij';
             deleteButton.addEventListener('click', () => deleteSavedGame(game, deleteButton));
 
-            row.append(button, deleteButton);
+            row.append(button, mailButton, deleteButton);
             list.appendChild(row);
         });
     } catch (error) {
         console.error('Load saved games error:', error);
         status.textContent = 'Opgeslagen partijen konden niet worden geladen.';
+    }
+}
+
+async function emailSavedGame(game, button) {
+    const status = document.getElementById('saved-games-status');
+    button.disabled = true;
+    status.textContent = 'Opgeslagen partij ophalen...';
+    try {
+        const response = await fetch(`games.php?id=${encodeURIComponent(game.id)}`);
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || 'load-failed');
+
+        const subject = encodeURIComponent(`Schaakpartij: ${game.white_name} – ${game.black_name} (PGN)`);
+        const body = encodeURIComponent(result.pgn);
+        status.textContent = 'E-mail wordt geopend.';
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    } catch (error) {
+        console.error('Email saved game error:', error);
+        status.textContent = 'Opgeslagen partij kon niet worden gemaild.';
+        button.disabled = false;
     }
 }
 
