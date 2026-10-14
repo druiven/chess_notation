@@ -33,7 +33,7 @@ let gameHistoryStack = [];
 let currentHistoryIndex = -1;
 let isBoardFlipped = false;
 let pendingPromotion = null;
-let showMoveHints = true;
+let showMoveHints = false;
 
 // --- IMAGE URL LOGIC ---
 function getPieceUrl(pieceChar) {
@@ -64,7 +64,7 @@ function initGame() {
     };
     enPassantTarget = null;
     pendingPromotion = null;
-    showMoveHints = true; // Default hints aan bij nieuw spel
+    showMoveHints = false; // Default hints uit bij nieuw spel
 
     gameHistoryStack = [];
     currentHistoryIndex = -1;
@@ -146,7 +146,7 @@ function restoreMemory() {
 
         gameHistoryStack = mem.stack;
         isBoardFlipped = !!mem.flipped;
-        showMoveHints = mem.hints !== false;
+        showMoveHints = mem.hints === true;
         document.getElementById('name-white').value = mem.white || '';
         document.getElementById('name-black').value = mem.black || '';
         pendingPromotion = null;
